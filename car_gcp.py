@@ -9,10 +9,11 @@ import time
 GPIO.setmode(GPIO.BOARD)
 
 
+# To connect Ultra-Sonic Distance Sensor
+
 TRIG=16
 ECHO=18
 
-#  Distance
 GPIO.setup(TRIG,GPIO.OUT)
 GPIO.setup(ECHO,GPIO.IN)
 
@@ -21,10 +22,11 @@ GPIO.setup(11,GPIO.OUT)
 GPIO.setup(13,GPIO.OUT)
 GPIO.setup(15,GPIO.OUT)
 
-#  Motion
+#  For connecting PIR Motion Sensor
+
 GPIO.setup(22,GPIO.IN)
 
-#Sound
+# For connecting Sound Sensor
 
 GPIO.setup(40,GPIO.IN)
 
@@ -34,7 +36,9 @@ def left():
     GPIO.output(11,False)
     GPIO.output(7,False)
     GPIO.output(13,False)
-    
+  
+# Initially all wheels are stop
+
 GPIO.output(15,False)
 GPIO.output(11,False)
 GPIO.output(7,False)
@@ -42,9 +46,11 @@ GPIO.output(13,False)
     
 
 
+    
+# Here we are defining the connection to the GCP IOT Core Console/.
+
 # Define some project-based variables to be used below. This should be the only
 # block of variables that you need to edit in order to run this script
-
 ssl_private_key_filepath = '/home/pi/demo_private.pem'
 ssl_algorithm = 'RS256' # Either RS256 or ES256
 root_cert_filepath = '/home/pi/roots.pem'
@@ -52,7 +58,6 @@ project_id = 'practice-308413'
 gcp_location = 'asia-east1'
 registry_id = 'my_registry'
 device_id = 'my_device'
-
 # end of user-variables
 
 cur_time = datetime.datetime.utcnow()
@@ -96,27 +101,30 @@ client.loop_start()
 
 # Could set this granularity to whatever we want based on device, monitoring needs, etc
 
-while True:
-   
 
-    
-    
+while True:
     
     GPIO.output(TRIG,0)
     time.sleep(1)
+    
+    # Throwing a signal for 0.00001 second
     GPIO.output(TRIG,1)
     time.sleep(0.00001)
-    GPIO.output(TRIG,0)
-
-     
     
-
+    # Making the sensor idle for 1 second
+    GPIO.output(TRIG,0)
+    time.sleep(1)
+    
+    # Taking the outputs given by PIR and sound sensor
     x=GPIO.input(22)
     y=GPIO.input(40)
     
+    
+    
     while GPIO.input(ECHO)==0:
         pass
-
+    
+    # If the ultrasonic wave is just starting to be received
     pulse_start=time.time() 
     
        
@@ -125,18 +133,19 @@ while True:
         pass
 
     pulse_end=time.time()
-
-    pulse_time=pulse_end-pulse_start
+    
+    # Stop at the time when it just gets over at the receiiving end
+    
+    pulse_time=pulse_end-pulse_start  # Calculating the time from starting till end
+    
+    # Approx distance is calculated
+    
     distance=pulse_time*17150
     distance=round(distance,2)
     
-    if distance<110:
-        
-      
+    if distance<100:
         print()
-
         if x==1:
-            
             xflag="Motion Detected"
             print(xflag)
         elif x==0:
@@ -154,9 +163,10 @@ while True:
         GPIO.output(11,False)
         GPIO.output(7,False)
         GPIO.output(13,False)
+        
+        # Payload made to be sent to Google IOT Core Console
         payload = f'Stopped at an object distance of {distance},{xflag},{yflag}'
 
-  # Uncomment following line when ready to publish
         client.publish(_MQTT_TOPIC, payload, qos=1)
 
         print(payload)
@@ -166,7 +176,6 @@ while True:
         
     elif distance>100:
         print()
-        
         if x==1:
             xflag="Motion Detected"
             print(xflag)
@@ -184,7 +193,8 @@ while True:
         GPIO.output(11,True)
         GPIO.output(7,False)
         GPIO.output(13,False)
-
+        
+        # Payload made to be sent to Google IOT Core Console
         payload = f'Object distance at {distance} ,{xflag},{yflag}'
 
         client.publish(_MQTT_TOPIC, payload, qos=1)
@@ -192,9 +202,6 @@ while True:
         print(payload)
 
         
-        
-    
+       
 GPIO.cleanup()
-
-
 client.loop_stop()
